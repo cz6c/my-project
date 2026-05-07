@@ -1,8 +1,14 @@
 <script lang="ts" setup>
-import type { YearEndTaxMode } from '@/utils/salaryCalculator'
+import type { HfPaymentType, SsPaymentType, YearEndTaxMode } from '@/utils/salaryCalculator'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { getSalaryCityName } from '@/constants/salaryCityPicker'
+import {
+  HF_PAYMENT_OPTIONS,
+  salaryOptionLabel,
+  SS_PAYMENT_OPTIONS,
+  YEAR_END_TAX_OPTIONS,
+} from '@/constants/salaryFormOptions'
 import { useSalaryCalcStore } from '@/store/salaryCalc'
 import { getCityProfile } from '@/utils/salaryCalculator'
 import { cloneSalaryCalcResult, prependSalaryHistory } from '@/utils/salaryHistory'
@@ -26,7 +32,8 @@ const primary = '#3A96F5'
 /** 须高于自定义 TabBar（src/tabbar/index.vue 内 z-index:1000），否则弹出层会被挡住 */
 const popupZIndex = 1100
 const store = useSalaryCalcStore()
-const { input } = storeToRefs(store)
+/** 勿命名为 input：小程序编译会与原生 <input> 混淆，生成错误变量名 */
+const { input: salaryForm } = storeToRefs(store)
 
 const resultTab = ref<'month' | 'year'>('month')
 const showSsTypePicker = ref(false)
@@ -35,27 +42,21 @@ const showHfTypePicker = ref(false)
 
 const result = computed(() => store.result)
 
-const cityLabel = computed(() => getSalaryCityName(input.value.cityId) || getCityProfile(input.value.cityId).name || '选择城市')
+const cityLabel = computed(() => getSalaryCityName(salaryForm.value.cityId) || getCityProfile(salaryForm.value.cityId).name || '选择城市')
 
-const ssTypeLabel = computed(() => {
-  const m: Record<string, string> = { min_base: '最低基数', actual_salary: '实际工资', custom: '自定义' }
-  return m[input.value.ssPaymentType] ?? ''
-})
+const ssTypeLabel = computed(() =>
+  salaryOptionLabel(SS_PAYMENT_OPTIONS, salaryForm.value.ssPaymentType),
+)
 
-const yearEndModeLabel = computed(() => (input.value.yearEndTaxMode === 'separate' ? '单独计税' : '并入综合所得'))
+const yearEndModeLabel = computed(() =>
+  salaryOptionLabel(YEAR_END_TAX_OPTIONS, salaryForm.value.yearEndTaxMode),
+)
 
-const hfBaseLabel = computed(() => {
-  const m: Record<string, string> = {
-    none: '不缴纳',
-    min_base: '最低基数',
-    by_salary: '按照工资',
-    custom: '自定义',
-    same_as_ss: '与社保同基数',
-  }
-  return m[input.value.hfPaymentType] ?? ''
-})
+const hfBaseLabel = computed(() =>
+  salaryOptionLabel(HF_PAYMENT_OPTIONS, salaryForm.value.hfPaymentType),
+)
 
-const showHfRatioAndBase = computed(() => input.value.hfPaymentType !== 'none')
+const showHfRatioAndBase = computed(() => salaryForm.value.hfPaymentType !== 'none')
 
 const displayNet = computed(() => {
   if (resultTab.value === 'month')
@@ -71,19 +72,19 @@ const bonusMultipliers = [1, 2, 3, 4, 6, 8, 10] as const
 const selectedBonusMul = ref<number | null>(1)
 
 watch(
-  () => input.value.preTaxMonthly,
+  () => salaryForm.value.preTaxMonthly,
   () => {
-    if (selectedBonusMul.value != null && input.value.yearEndBonus === Math.round(input.value.preTaxMonthly * selectedBonusMul.value)) {
+    if (selectedBonusMul.value != null && salaryForm.value.yearEndBonus === Math.round(salaryForm.value.preTaxMonthly * selectedBonusMul.value)) {
       return
     }
-    if (input.value.yearEndBonus === 0)
+    if (salaryForm.value.yearEndBonus === 0)
       selectedBonusMul.value = 1
   },
 )
 
 function applyBonusMul(m: number) {
   selectedBonusMul.value = m
-  store.patchInput({ yearEndBonus: Math.round(input.value.preTaxMonthly * m) })
+  store.patchInput({ yearEndBonus: Math.round(salaryForm.value.preTaxMonthly * m) })
 }
 
 function onPreTaxInput(e: UniInputChangeEvent) {
@@ -125,9 +126,9 @@ function onHfRatePercentInput(e: UniInputChangeEvent) {
 }
 
 const hfRatePercentStr = computed(() => {
-  if (input.value.hfPaymentType === 'none')
+  if (salaryForm.value.hfPaymentType === 'none')
     return ''
-  const p = input.value.hfRate * 100
+  const p = salaryForm.value.hfRate * 100
   if (p <= 0)
     return ''
   return String(Math.round(p * 10) / 10).replace(/\.0$/, '')
@@ -137,13 +138,13 @@ function openSelectCity() {
   uni.navigateTo({ url: '/pages/salary/select-city' })
 }
 
-function pickSsType(key: 'min_base' | 'actual_salary' | 'custom') {
+function pickSsType(key: SsPaymentType) {
   store.patchInput({ ssPaymentType: key })
-  const city = getCityProfile(input.value.cityId)
+  const city = getCityProfile(salaryForm.value.cityId)
   if (key === 'min_base')
     store.patchInput({ ssBase: city.ssBaseMin })
   else if (key === 'actual_salary')
-    store.patchInput({ ssBase: Math.min(Math.max(input.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap) })
+    store.patchInput({ ssBase: Math.min(Math.max(salaryForm.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap) })
   showSsTypePicker.value = false
 }
 
@@ -152,15 +153,15 @@ function pickYearEndMode(m: YearEndTaxMode) {
   showYearEndModePicker.value = false
 }
 
-function pickHfType(key: 'none' | 'min_base' | 'by_salary' | 'custom') {
-  const city = getCityProfile(input.value.cityId)
+function pickHfType(key: HfPaymentType) {
+  const city = getCityProfile(salaryForm.value.cityId)
   if (key === 'min_base') {
     store.patchInput({ hfPaymentType: key, hfBase: city.ssBaseMin })
   }
   else if (key === 'by_salary') {
     store.patchInput({
       hfPaymentType: key,
-      hfBase: Math.min(Math.max(input.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap),
+      hfBase: Math.min(Math.max(salaryForm.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap),
     })
   }
   else {
@@ -174,13 +175,13 @@ function fmt(n: number) {
 }
 
 function goDetail() {
-  const cityName = getSalaryCityName(input.value.cityId) || getCityProfile(input.value.cityId).name
+  const cityName = getSalaryCityName(salaryForm.value.cityId) || getCityProfile(salaryForm.value.cityId).name
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
   prependSalaryHistory({
     id,
-    title: `${cityName} · 税前${input.value.preTaxMonthly}`,
+    title: `${cityName} · 税前${salaryForm.value.preTaxMonthly}`,
     firstMonthNet: result.value.firstMonthNet,
-    input: { ...input.value },
+    input: { ...salaryForm.value },
     result: cloneSalaryCalcResult(result.value),
   })
   uni.navigateTo({ url: '/pages/salary/detail' })
@@ -288,7 +289,7 @@ function goDetail() {
           <input
             class="input-right"
             type="digit"
-            :value="input.preTaxMonthly ? String(input.preTaxMonthly) : ''"
+            :value="salaryForm.preTaxMonthly ? String(salaryForm.preTaxMonthly) : ''"
             placeholder="0"
             @input="onPreTaxInput"
           >
@@ -309,7 +310,7 @@ function goDetail() {
           <input
             class="input-right"
             type="digit"
-            :value="input.yearEndBonus ? String(input.yearEndBonus) : ''"
+            :value="salaryForm.yearEndBonus ? String(salaryForm.yearEndBonus) : ''"
             placeholder="请输入奖金"
             @input="onBonusInput"
           >
@@ -344,10 +345,10 @@ function goDetail() {
             社保缴纳基数
           </text>
           <input
-            v-if="input.ssPaymentType === 'custom'"
+            v-if="salaryForm.ssPaymentType === 'custom'"
             class="input-right"
             type="number"
-            :value="String(input.ssBase)"
+            :value="String(salaryForm.ssBase)"
             @input="onSsBaseInput"
           >
           <text v-else class="text-#333 tabular-nums">
@@ -383,14 +384,14 @@ function goDetail() {
             </text>
           </view>
         </view>
-        <view v-if="input.hfPaymentType === 'custom'" class="cell cell--input">
+        <view v-if="salaryForm.hfPaymentType === 'custom'" class="cell cell--input">
           <text class="label">
             公积金基数
           </text>
           <input
             class="input-right"
             type="number"
-            :value="String(input.hfBase)"
+            :value="String(salaryForm.hfBase)"
             @input="onHfBaseInput"
           >
         </view>
@@ -412,7 +413,7 @@ function goDetail() {
           <input
             class="input-right"
             type="digit"
-            :value="input.specialDeductionMonthly ? String(input.specialDeductionMonthly) : ''"
+            :value="salaryForm.specialDeductionMonthly ? String(salaryForm.specialDeductionMonthly) : ''"
             placeholder="请输入具体数额"
             @input="onSpecialInput"
           >
@@ -442,14 +443,13 @@ function goDetail() {
       <view class="picker-title">
         社保缴纳类型
       </view>
-      <view class="picker-row" @click="pickSsType('min_base')">
-        最低基数
-      </view>
-      <view class="picker-row" @click="pickSsType('actual_salary')">
-        实际工资（在上下限内）
-      </view>
-      <view class="picker-row" @click="pickSsType('custom')">
-        自定义基数
+      <view
+        v-for="opt in SS_PAYMENT_OPTIONS"
+        :key="opt.value"
+        class="picker-row"
+        @click="pickSsType(opt.value)"
+      >
+        {{ opt.label }}
       </view>
     </wd-popup>
 
@@ -464,11 +464,13 @@ function goDetail() {
       <view class="picker-title">
         年终计税方式
       </view>
-      <view class="picker-row" @click="pickYearEndMode('separate')">
-        单独计税
-      </view>
-      <view class="picker-row" @click="pickYearEndMode('merge')">
-        并入综合所得
+      <view
+        v-for="opt in YEAR_END_TAX_OPTIONS"
+        :key="opt.value"
+        class="picker-row"
+        @click="pickYearEndMode(opt.value)"
+      >
+        {{ opt.label }}
       </view>
     </wd-popup>
 
@@ -483,17 +485,13 @@ function goDetail() {
       <view class="picker-title">
         公积金缴纳基数
       </view>
-      <view class="picker-row" @click="pickHfType('none')">
-        不缴纳
-      </view>
-      <view class="picker-row" @click="pickHfType('min_base')">
-        最低基数
-      </view>
-      <view class="picker-row" @click="pickHfType('by_salary')">
-        按照工资
-      </view>
-      <view class="picker-row" @click="pickHfType('custom')">
-        自定义
+      <view
+        v-for="opt in HF_PAYMENT_OPTIONS"
+        :key="opt.value"
+        class="picker-row"
+        @click="pickHfType(opt.value)"
+      >
+        {{ opt.label }}
       </view>
     </wd-popup>
   </view>

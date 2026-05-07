@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
+import { salaryOptionLabel, YEAR_END_TAX_OPTIONS } from '@/constants/salaryFormOptions'
 import { useSalaryCalcStore } from '@/store/salaryCalc'
 import { calcSalary } from '@/utils/salaryCalculator'
 import { findSalaryHistoryById } from '@/utils/salaryHistory'
@@ -46,6 +47,10 @@ const detailInput = computed(() => {
     return historyItem.value.input
   return store.input
 })
+
+const yearEndTaxLabel = computed(() =>
+  salaryOptionLabel(YEAR_END_TAX_OPTIONS, detailInput.value.yearEndTaxMode),
+)
 
 function rowPersonal(key: string) {
   return r.value.insuranceRows.find(i => i.key === key)?.personal ?? 0
@@ -279,7 +284,7 @@ function fmt(n: number) {
       <view v-if="detailInput.yearEndBonus > 0" class="card mt-12px rounded-12px bg-white p-12px text-13px leading-relaxed shadow-sm">
         <text class="text-#666">
           年终奖 {{ fmt(detailInput.yearEndBonus) }}，个税 {{ fmt(r.yearEndBonusTax) }}，到手 {{ fmt(r.yearEndBonusNet) }}
-          （{{ detailInput.yearEndTaxMode === 'separate' ? '单独计税' : '并入综合' }}）
+          （{{ yearEndTaxLabel }}）
         </text>
       </view>
     </view>
