@@ -80,7 +80,7 @@ export default defineConfig({
     'i-carbon-ibm-watson-language-translator',
     'i-carbon-menu',
     'i-carbon-money',
-    'i-carbon-recent',
+    'i-carbon-time',
     'i-carbon-tools',
     'i-carbon-chevron-right',
     'i-carbon-view',

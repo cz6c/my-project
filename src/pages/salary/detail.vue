@@ -3,8 +3,7 @@ import { onLoad } from '@dcloudio/uni-app'
 import { computed, ref } from 'vue'
 import { salaryOptionLabel, YEAR_END_TAX_OPTIONS } from '@/constants/salaryFormOptions'
 import { useSalaryCalcStore } from '@/store/salaryCalc'
-import { calcSalary } from '@/utils/salaryCalculator'
-import { findSalaryHistoryById } from '@/utils/salaryHistory'
+import { useSalaryHistoryStore } from '@/store/salaryHistory'
 
 defineOptions({ name: 'SalaryDetail' })
 
@@ -19,6 +18,7 @@ definePage({
 
 const primary = '#3A96F5'
 const store = useSalaryCalcStore()
+const salaryHistoryStore = useSalaryHistoryStore()
 
 /** 从「历史记录」进入时携带 id，展示该条快照；从「查看明细」进入无 id，用当前 store */
 const historyId = ref('')
@@ -30,21 +30,20 @@ onLoad((options?: Record<string, string>) => {
 const historyItem = computed(() => {
   if (!historyId.value)
     return null
-  return findSalaryHistoryById(historyId.value) ?? null
+  return salaryHistoryStore.findById(historyId.value) ?? null
 })
 
 const r = computed(() => {
-  const item = historyItem.value
-  if (item?.result)
-    return item.result
-  if (item?.input)
-    return calcSalary(item.input)
+  const snap = historyItem.value?.snapshot
+  if (snap)
+    return snap.result
   return store.result
 })
 
 const detailInput = computed(() => {
-  if (historyItem.value)
-    return historyItem.value.input
+  const snap = historyItem.value?.snapshot
+  if (snap)
+    return snap.input
   return store.input
 })
 
@@ -52,37 +51,39 @@ const yearEndTaxLabel = computed(() =>
   salaryOptionLabel(YEAR_END_TAX_OPTIONS, detailInput.value.yearEndTaxMode),
 )
 
-function rowPersonal(key: string) {
-  return r.value.insuranceRows.find(i => i.key === key)?.personal ?? 0
-}
-
-const annualPensionP = computed(() => rowPersonal('pension') * 12)
-const annualMedicalP = computed(() => rowPersonal('medical') * 12)
-const annualUnempP = computed(() => rowPersonal('unemp') * 12)
-const annualInjuryP = computed(() => rowPersonal('injury') * 12)
-const annualMatP = computed(() => rowPersonal('mat') * 12)
-const annualHfP = computed(() => r.value.hfPersonalMonthly * 12)
-
 const insPersonalTotal = computed(() =>
   r.value.insuranceRows.reduce((s, row) => s + row.personal, 0),
 )
+/** 五险个人部分年度合计（与下方「每月五险一金」个人列加总一致） */
+const annualInsPersonalP = computed(() => insPersonalTotal.value * 12)
 const insCompanyTotal = computed(() =>
   r.value.insuranceRows.reduce((s, row) => s + row.company, 0),
 )
 
 function fmt(n: number) {
-  return (Math.round(n * 10) / 10).toFixed(1)
+  return (Math.round(n * 100) / 100).toFixed(2)
 }
+
+/** 综合所得个税税率表（全年应纳税所得额） */
+const INCOME_TAX_BRACKETS = [
+  { level: 1, range: '不超过36000元的', rate: 3, deduction: 0 },
+  { level: 2, range: '超过36000元至144000元的部分', rate: 10, deduction: 2520 },
+  { level: 3, range: '超过144000元至300000元的部分', rate: 20, deduction: 16920 },
+  { level: 4, range: '超过300000元至420000元的部分', rate: 25, deduction: 31920 },
+  { level: 5, range: '超过420000元至660000元的部分', rate: 30, deduction: 52920 },
+  { level: 6, range: '超过660000元至960000元的部分', rate: 35, deduction: 85920 },
+  { level: 7, range: '超过960000元的部分', rate: 45, deduction: 181920 },
+] as const
 </script>
 
 <template>
   <view class="page pb-24px">
     <view class="hero px-16px pb-20px pt-safe" :style="{ background: primary }">
       <view class="pt-12px text-center">
-        <text class="text-40px text-white font-semibold leading-none tabular-nums">
+        <text class="text-36px text-white font-semibold leading-none tabular-nums">
           {{ fmt(r.annualTakeHome) }}
         </text>
-        <view class="mt-8px inline-block rounded-4px bg-white/20 px-10px py-4px">
+        <view class="ml-8px mt-8px inline-block rounded-4px bg-white/20 px-8px py-2px">
           <text class="text-12px text-white/95">
             到手年薪
           </text>
@@ -103,50 +104,10 @@ function fmt(n: number) {
           </view>
           <view class="sum-cell">
             <text class="sum-val tabular-nums">
-              {{ fmt(annualHfP) }}
+              {{ fmt(annualInsPersonalP) }}
             </text>
             <text class="sum-lab">
-              个人公积金
-            </text>
-          </view>
-          <view class="sum-cell">
-            <text class="sum-val tabular-nums">
-              {{ fmt(annualPensionP) }}
-            </text>
-            <text class="sum-lab">
-              养老保险
-            </text>
-          </view>
-          <view class="sum-cell">
-            <text class="sum-val tabular-nums">
-              {{ fmt(annualMedicalP) }}
-            </text>
-            <text class="sum-lab">
-              医疗保险
-            </text>
-          </view>
-          <view class="sum-cell">
-            <text class="sum-val tabular-nums">
-              {{ fmt(annualUnempP) }}
-            </text>
-            <text class="sum-lab">
-              失业保险
-            </text>
-          </view>
-          <view class="sum-cell">
-            <text class="sum-val tabular-nums">
-              {{ fmt(annualInjuryP) }}
-            </text>
-            <text class="sum-lab">
-              工伤保险
-            </text>
-          </view>
-          <view class="sum-cell">
-            <text class="sum-val tabular-nums">
-              {{ fmt(annualMatP) }}
-            </text>
-            <text class="sum-lab">
-              生育保险
+              五险一金
             </text>
           </view>
         </view>
@@ -242,6 +203,11 @@ function fmt(n: number) {
             </view>
             <view class="month-cell month-cell--grow">
               <text class="month-head-text">
+                五险一金
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-head-text">
                 个人所得税
               </text>
             </view>
@@ -269,6 +235,11 @@ function fmt(n: number) {
             </view>
             <view class="month-cell month-cell--grow">
               <text class="month-num tabular-nums">
+                {{ fmt(row.fiveInsFundPersonal) }}
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-num tabular-nums">
                 {{ fmt(row.tax) }}
               </text>
             </view>
@@ -281,11 +252,73 @@ function fmt(n: number) {
         </view>
       </view>
 
+      <view v-if="detailInput.yearEndBonus > 0" class="section-title mt-20px">
+        <view class="bar" :style="{ background: primary }" />
+        <text>年终奖</text>
+      </view>
       <view v-if="detailInput.yearEndBonus > 0" class="card mt-12px rounded-12px bg-white p-12px text-13px leading-relaxed shadow-sm">
         <text class="text-#666">
           年终奖 {{ fmt(detailInput.yearEndBonus) }}，个税 {{ fmt(r.yearEndBonusTax) }}，到手 {{ fmt(r.yearEndBonusNet) }}
           （{{ yearEndTaxLabel }}）
         </text>
+      </view>
+
+      <view class="section-title mt-20px">
+        <view class="bar" :style="{ background: primary }" />
+        <text>个人所得税税率表（综合所得适用）</text>
+      </view>
+      <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
+        <view class="pit-table">
+          <view class="pit-head">
+            <view class="pit-cell pit-cell--level">
+              <text class="pit-head-text">
+                级数
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--range">
+              <text class="pit-head-text">
+                全年应纳税所得额
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--rate">
+              <text class="pit-head-text">
+                税率(%)
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--deduct">
+              <text class="pit-head-text">
+                速算扣除数
+              </text>
+            </view>
+          </view>
+          <view
+            v-for="(row, idx) in INCOME_TAX_BRACKETS"
+            :key="row.level"
+            class="pit-row"
+            :class="idx % 2 === 1 ? 'pit-row--alt' : ''"
+          >
+            <view class="pit-cell pit-cell--level">
+              <text class="pit-body-text tabular-nums">
+                {{ row.level }}
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--range">
+              <text class="pit-body-text pit-body-text--range">
+                {{ row.range }}
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--rate">
+              <text class="pit-num tabular-nums">
+                {{ row.rate }}
+              </text>
+            </view>
+            <view class="pit-cell pit-cell--deduct">
+              <text class="pit-num tabular-nums">
+                {{ row.deduction }}
+              </text>
+            </view>
+          </view>
+        </view>
       </view>
     </view>
   </view>
@@ -439,7 +472,7 @@ function fmt(n: number) {
   justify-content: center;
 }
 .month-cell--narrow {
-  width: 22%;
+  width: 14%;
   padding-left: 8px;
 }
 .month-cell--grow {
@@ -461,6 +494,78 @@ function fmt(n: number) {
   color: #333;
 }
 .month-num {
+  font-size: 13px;
+  color: #333;
+  text-align: center;
+}
+
+.pit-table {
+  width: 100%;
+}
+.pit-head,
+.pit-row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+}
+.pit-head {
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.pit-row {
+  padding: 10px 0;
+  min-height: 44px;
+}
+.pit-row--alt {
+  background: #fafafa;
+}
+.pit-cell {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.pit-cell--level {
+  width: 14%;
+  padding-left: 8px;
+}
+.pit-cell--range {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  padding-right: 6px;
+}
+.pit-cell--rate {
+  width: 18%;
+  align-items: center;
+}
+.pit-cell--deduct {
+  width: 24%;
+  align-items: center;
+}
+.pit-head-text {
+  font-size: 11px;
+  color: #999;
+  text-align: center;
+}
+.pit-cell--level .pit-head-text {
+  text-align: left;
+}
+.pit-cell--range .pit-head-text {
+  text-align: left;
+}
+.pit-body-text {
+  font-size: 13px;
+  color: #333;
+}
+.pit-body-text--range {
+  line-height: 1.4;
+}
+.pit-num {
   font-size: 13px;
   color: #333;
   text-align: center;

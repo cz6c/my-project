@@ -51,7 +51,7 @@ export const customTabbarList: CustomTabBarItem[] = [
     text: '历史记录',
     pagePath: 'pages/salary/history',
     iconType: 'unocss',
-    icon: 'i-carbon-menu',
+    icon: 'i-carbon-time',
   },
   {
     text: '更多工具',

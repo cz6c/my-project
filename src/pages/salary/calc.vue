@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import type { HfPaymentType, SsPaymentType, YearEndTaxMode } from '@/utils/salaryCalculator'
+import type { HfPaymentType, SalaryCalcResult, SsPaymentType, YearEndTaxMode } from '@/utils/salaryCalculator'
 import { storeToRefs } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { getSalaryCityName } from '@/constants/salaryCityPicker'
@@ -10,8 +10,8 @@ import {
   YEAR_END_TAX_OPTIONS,
 } from '@/constants/salaryFormOptions'
 import { useSalaryCalcStore } from '@/store/salaryCalc'
+import { useSalaryHistoryStore } from '@/store/salaryHistory'
 import { getCityProfile } from '@/utils/salaryCalculator'
-import { cloneSalaryCalcResult, prependSalaryHistory } from '@/utils/salaryHistory'
 
 defineOptions({ name: 'SalaryCalc' })
 
@@ -32,10 +32,10 @@ const primary = '#3A96F5'
 /** 须高于自定义 TabBar（src/tabbar/index.vue 内 z-index:1000），否则弹出层会被挡住 */
 const popupZIndex = 1100
 const store = useSalaryCalcStore()
+const salaryHistoryStore = useSalaryHistoryStore()
 /** 勿命名为 input：小程序编译会与原生 <input> 混淆，生成错误变量名 */
 const { input: salaryForm } = storeToRefs(store)
 
-const resultTab = ref<'month' | 'year'>('month')
 const showSsTypePicker = ref(false)
 const showYearEndModePicker = ref(false)
 const showHfTypePicker = ref(false)
@@ -57,16 +57,6 @@ const hfBaseLabel = computed(() =>
 )
 
 const showHfRatioAndBase = computed(() => salaryForm.value.hfPaymentType !== 'none')
-
-const displayNet = computed(() => {
-  if (resultTab.value === 'month')
-    return result.value.firstMonthNet
-  return result.value.annualTakeHome
-})
-
-const displayNetLabel = computed(() => (resultTab.value === 'month' ? '税后月薪' : '税后年薪'))
-
-const showFirstMonthTag = computed(() => resultTab.value === 'month' && Math.abs(result.value.firstMonthNet - result.value.steadyMonthNet) > 0.01)
 
 const bonusMultipliers = [1, 2, 3, 4, 6, 8, 10] as const
 const selectedBonusMul = ref<number | null>(1)
@@ -170,19 +160,16 @@ function pickHfType(key: HfPaymentType) {
   showHfTypePicker.value = false
 }
 
-function fmt(n: number) {
-  return (Math.round(n * 10) / 10).toFixed(1)
-}
-
 function goDetail() {
   const cityName = getSalaryCityName(salaryForm.value.cityId) || getCityProfile(salaryForm.value.cityId).name
   const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
-  prependSalaryHistory({
+  salaryHistoryStore.prepend({
     id,
-    title: `${cityName} · 税前${salaryForm.value.preTaxMonthly}`,
-    firstMonthNet: result.value.firstMonthNet,
-    input: { ...salaryForm.value },
-    result: cloneSalaryCalcResult(result.value),
+    title: `${cityName} · 每月税前${salaryForm.value.preTaxMonthly}`,
+    snapshot: {
+      input: { ...salaryForm.value },
+      result: JSON.parse(JSON.stringify(result.value)) as SalaryCalcResult,
+    },
   })
   uni.navigateTo({ url: '/pages/salary/detail' })
 }
@@ -196,82 +183,7 @@ function goDetail() {
       </view>
     </view>
 
-    <view class="relative z-1 px-12px -mt-12px">
-      <view class="result-card rounded-t-16px bg-white pb-16px pt-12px shadow-sm">
-        <view class="flex items-center justify-between px-12px">
-          <view class="segment flex flex-1 rounded-8px bg-#f0f4f8 p-3px">
-            <view
-              class="segment-item flex-1 py-6px text-center text-13px"
-              :class="resultTab === 'month' ? 'segment-item--on' : 'text-#666'"
-              @click="resultTab = 'month'"
-            >
-              税后月薪
-            </view>
-            <view
-              class="segment-item flex-1 py-6px text-center text-13px"
-              :class="resultTab === 'year' ? 'segment-item--on' : 'text-#666'"
-              @click="resultTab = 'year'"
-            >
-              税后年薪
-            </view>
-          </view>
-          <view
-            class="ml-8px flex shrink-0 items-center rounded-full bg-#eef6ff px-10px py-4px text-12px"
-            :style="{ color: primary }"
-            @click="goDetail"
-          >
-            <text class="i-carbon-view mr-4px text-14px" />
-            查看明细
-          </view>
-        </view>
-
-        <view class="mt-16px px-16px">
-          <view class="flex flex-wrap items-baseline gap-8px">
-            <text class="text-15px text-#666">
-              ¥
-            </text>
-            <text class="text-36px font-semibold tabular-nums" :style="{ color: primary }">
-              {{ fmt(displayNet) }}
-            </text>
-            <text v-if="showFirstMonthTag" class="text-12px text-#999">
-              (首月)
-            </text>
-          </view>
-          <view class="mt-12px flex flex-wrap gap-8px">
-            <view class="chip">
-              <text class="text-11px text-#666">
-                个税
-              </text>
-              <text class="mt-2px text-13px font-medium tabular-nums" :style="{ color: primary }">
-                {{ fmt(result.firstMonthIncomeTax) }}
-              </text>
-            </view>
-            <view class="chip">
-              <text class="text-11px text-#666">
-                社保
-              </text>
-              <text class="mt-2px text-13px font-medium tabular-nums" :style="{ color: primary }">
-                {{ fmt(result.ssPersonalMonthly) }}
-              </text>
-            </view>
-            <view class="chip">
-              <text class="text-11px text-#666">
-                公积金
-              </text>
-              <text class="mt-2px text-13px font-medium tabular-nums" :style="{ color: primary }">
-                {{ fmt(result.hfPersonalMonthly) }}
-              </text>
-            </view>
-          </view>
-        </view>
-
-        <view class="wave-bottom mt-12px h-12px w-full overflow-hidden">
-          <view class="wave-bg" />
-        </view>
-      </view>
-    </view>
-
-    <view class="form-scroll px-12px pb-12px pt-8px">
+    <view class="form-scroll px-12px pb-12px -mt-12px">
       <view class="card mb-12px rounded-12px bg-white p-12px shadow-sm">
         <view class="cell" @click="openSelectCity">
           <text class="label">

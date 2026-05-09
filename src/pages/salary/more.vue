@@ -15,7 +15,7 @@ function goIdWatermark() {
 
 <template>
   <view class="page px-16px pt-24px pb-safe">
-    <view
+    <!-- <view
       class="tool-card mb-16px"
       @click="goIdWatermark"
     >
@@ -24,7 +24,7 @@ function goIdWatermark() {
         <text class="tool-card-desc">上传证件照，添加用途水印后保存，本地处理不上传</text>
       </view>
       <text class="tool-card-arrow">›</text>
-    </view>
+    </view> -->
     <view class="rounded-12px bg-white p-20px text-14px text-#666 leading-relaxed shadow-sm">
       更多与薪资、个税相关的工具可在此扩展，例如：社保比例说明、反推税前、年度汇算参考等。
     </view>

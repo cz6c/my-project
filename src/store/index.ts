@@ -19,3 +19,4 @@ export default store
 export * from './token'
 export * from './user'
 export * from './salaryCalc'
+export * from './salaryHistory'
