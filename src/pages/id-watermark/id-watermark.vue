@@ -7,12 +7,10 @@ defineOptions({ name: 'IdWatermark' })
 /** 小程序端 canvas API 需传入页面/组件实例 */
 const canvasHost = getCurrentInstance()?.proxy as ComponentPublicInstance | undefined
 
-const PRIMARY = '#3A96F5'
-
 definePage({
   style: {
     navigationBarTitleText: '证件照片加水印',
-    navigationBarBackgroundColor: '#3A96F5',
+    navigationBarBackgroundColor: '#4285f4',
     navigationBarTextStyle: 'white',
     backgroundColor: '#f5f5f5',
   },
@@ -305,7 +303,7 @@ function saveWatermarked() {
               :class="{ ring: color === c.value }"
               :style="{ backgroundColor: c.value, borderColor: c.value === '#ffffff' ? '#ddd' : c.value }"
             />
-            <view v-if="color === c.value" class="check" :style="{ color: PRIMARY }">
+            <view v-if="color === c.value" class="check text-primary">
               ✓
             </view>
           </view>
@@ -321,7 +319,7 @@ function saveWatermarked() {
           :max="100"
           :step="1"
           show-value
-          :active-color="PRIMARY"
+          active-color="#4285f4"
           :block-size="20"
           @changing="onOpacityChange"
           @change="onOpacityChange"
@@ -340,7 +338,7 @@ function saveWatermarked() {
             <view class="angle-icon" :class="[`tilt-${Math.abs(a.deg)}`, { on: angleDeg === a.deg }]">
               <view class="angle-line" />
             </view>
-            <view v-if="angleDeg === a.deg" class="check" :style="{ color: PRIMARY }">
+            <view v-if="angleDeg === a.deg" class="check text-primary">
               ✓
             </view>
           </view>
@@ -356,7 +354,7 @@ function saveWatermarked() {
           :max="120"
           :step="1"
           show-value
-          :active-color="PRIMARY"
+          active-color="#4285f4"
           :block-size="20"
           @changing="onSpacingChange"
           @change="onSpacingChange"
@@ -372,7 +370,7 @@ function saveWatermarked() {
           :max="56"
           :step="1"
           show-value
-          :active-color="PRIMARY"
+          active-color="#4285f4"
           :block-size="20"
           @changing="onFontSizeChange"
           @change="onFontSizeChange"
@@ -534,7 +532,7 @@ function saveWatermarked() {
 }
 
 .color-dot.ring {
-  box-shadow: 0 0 0 2px v-bind(PRIMARY);
+  box-shadow: 0 0 0 2px var(--wot-primary-6, #4285f4);
 }
 
 .angle-icon {
@@ -549,8 +547,8 @@ function saveWatermarked() {
 }
 
 .angle-icon.on {
-  border-color: v-bind(PRIMARY);
-  box-shadow: 0 0 0 1px v-bind(PRIMARY);
+  border-color: var(--wot-primary-6, #4285f4);
+  box-shadow: 0 0 0 1px var(--wot-primary-6, #4285f4);
 }
 
 .angle-line {
@@ -599,12 +597,12 @@ function saveWatermarked() {
 
 .btn-outline {
   background: #fff !important;
-  color: v-bind(PRIMARY) !important;
-  border: 1px solid v-bind(PRIMARY) !important;
+  color: var(--wot-primary-6, #4285f4) !important;
+  border: 1px solid var(--wot-primary-6, #4285f4) !important;
 }
 
 .btn-primary {
-  background: v-bind(PRIMARY) !important;
+  background: var(--wot-primary-6, #4285f4) !important;
   color: #fff !important;
 }
 </style>

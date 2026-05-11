@@ -10,13 +10,12 @@ defineOptions({ name: 'SalaryDetail' })
 definePage({
   style: {
     navigationBarTitleText: '薪资明细',
-    navigationBarBackgroundColor: '#3A96F5',
+    navigationBarBackgroundColor: '#4285f4',
     navigationBarTextStyle: 'white',
     backgroundColor: '#f5f5f5',
   },
 })
 
-const primary = '#3A96F5'
 const store = useSalaryCalcStore()
 const salaryHistoryStore = useSalaryHistoryStore()
 
@@ -78,12 +77,12 @@ const INCOME_TAX_BRACKETS = [
 
 <template>
   <view class="page pb-24px">
-    <view class="hero px-16px pb-20px pt-safe" :style="{ background: primary }">
+    <view class="hero bg-primary px-16px pb-20px pt-safe">
       <view class="pt-12px text-center">
         <text class="text-36px text-white font-semibold leading-none tabular-nums">
           {{ fmt(r.annualTakeHome) }}
         </text>
-        <view class="ml-8px mt-8px inline-block rounded-4px bg-white/20 px-8px py-2px">
+        <view class="ml-8px mt-8px inline-block rounded-4px bg-white/20 px-8px py-1px">
           <text class="text-12px text-white/95">
             到手年薪
           </text>
@@ -107,15 +106,94 @@ const INCOME_TAX_BRACKETS = [
               {{ fmt(annualInsPersonalP) }}
             </text>
             <text class="sum-lab">
-              五险一金
+              五险一金（个人）
             </text>
           </view>
         </view>
       </view>
 
       <view class="section-title mt-20px">
-        <view class="bar" :style="{ background: primary }" />
-        <text>每月五险一金详情</text>
+        <view class="bar bg-primary" />
+        <text>每月到手工资</text>
+      </view>
+      <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
+        <view class="month-table">
+          <view class="month-head">
+            <view class="month-cell month-cell--narrow">
+              <text class="month-head-text">
+                月份
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-head-text">
+                税前
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-head-text">
+                五险一金
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-head-text">
+                个人所得税
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-head-text">
+                税后
+              </text>
+            </view>
+          </view>
+          <view
+            v-for="(row, idx) in r.monthlyRows"
+            :key="row.month"
+            class="month-row"
+            :class="idx % 2 === 1 ? 'month-row--alt' : ''"
+          >
+            <view class="month-cell month-cell--narrow">
+              <text class="month-body-text">
+                {{ row.month }}月
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-num tabular-nums">
+                {{ fmt(row.preTax) }}
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-num tabular-nums">
+                {{ fmt(row.fiveInsFundPersonal) }}
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-num tabular-nums">
+                {{ fmt(row.tax) }}
+              </text>
+            </view>
+            <view class="month-cell month-cell--grow">
+              <text class="month-num text-primary tabular-nums">
+                {{ fmt(row.postTax) }}
+              </text>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <view v-if="detailInput.yearEndBonus > 0" class="section-title mt-20px">
+        <view class="bar bg-primary" />
+        <text>年终奖</text>
+      </view>
+      <view v-if="detailInput.yearEndBonus > 0" class="card mt-12px rounded-12px bg-white p-12px text-13px leading-relaxed shadow-sm">
+        <text class="text-#666">
+          年终奖 {{ fmt(detailInput.yearEndBonus) }}，个税 {{ fmt(r.yearEndBonusTax) }}，到手 {{ fmt(r.yearEndBonusNet) }}
+          （{{ yearEndTaxLabel }}）
+        </text>
+      </view>
+
+      <view class="section-title mt-20px">
+        <view class="bar bg-primary" />
+        <text>每月五险一金</text>
       </view>
       <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
         <view class="ins-table">
@@ -185,86 +263,7 @@ const INCOME_TAX_BRACKETS = [
       </view>
 
       <view class="section-title mt-20px">
-        <view class="bar" :style="{ background: primary }" />
-        <text>每月到手工资</text>
-      </view>
-      <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
-        <view class="month-table">
-          <view class="month-head">
-            <view class="month-cell month-cell--narrow">
-              <text class="month-head-text">
-                月份
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-head-text">
-                税前
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-head-text">
-                五险一金
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-head-text">
-                个人所得税
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-head-text">
-                税后
-              </text>
-            </view>
-          </view>
-          <view
-            v-for="(row, idx) in r.monthlyRows"
-            :key="row.month"
-            class="month-row"
-            :class="idx % 2 === 1 ? 'month-row--alt' : ''"
-          >
-            <view class="month-cell month-cell--narrow">
-              <text class="month-body-text">
-                {{ row.month }}月
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-num tabular-nums">
-                {{ fmt(row.preTax) }}
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-num tabular-nums">
-                {{ fmt(row.fiveInsFundPersonal) }}
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-num tabular-nums">
-                {{ fmt(row.tax) }}
-              </text>
-            </view>
-            <view class="month-cell month-cell--grow">
-              <text class="month-num tabular-nums" :style="{ color: primary }">
-                {{ fmt(row.postTax) }}
-              </text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view v-if="detailInput.yearEndBonus > 0" class="section-title mt-20px">
-        <view class="bar" :style="{ background: primary }" />
-        <text>年终奖</text>
-      </view>
-      <view v-if="detailInput.yearEndBonus > 0" class="card mt-12px rounded-12px bg-white p-12px text-13px leading-relaxed shadow-sm">
-        <text class="text-#666">
-          年终奖 {{ fmt(detailInput.yearEndBonus) }}，个税 {{ fmt(r.yearEndBonusTax) }}，到手 {{ fmt(r.yearEndBonusNet) }}
-          （{{ yearEndTaxLabel }}）
-        </text>
-      </view>
-
-      <view class="section-title mt-20px">
-        <view class="bar" :style="{ background: primary }" />
+        <view class="bar bg-primary" />
         <text>个人所得税税率表（综合所得适用）</text>
       </view>
       <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
@@ -319,6 +318,10 @@ const INCOME_TAX_BRACKETS = [
             </view>
           </view>
         </view>
+      </view>
+
+      <view class="mt-12px px-8px text-center text-11px text-#999 leading-relaxed">
+        注：由于各地政策有细微差异，计算结果仅供参考
       </view>
     </view>
   </view>
@@ -497,6 +500,9 @@ const INCOME_TAX_BRACKETS = [
   font-size: 13px;
   color: #333;
   text-align: center;
+}
+.month-num.text-primary {
+  color: var(--wot-primary-6, #4285f4);
 }
 
 .pit-table {

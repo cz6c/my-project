@@ -47,9 +47,10 @@ function confirmDelete(item: SalaryHistoryItem) {
 
 <template>
   <view class="page px-12px pt-12px pb-safe" @click="closeOutside">
-    <view v-if="list.length === 0" class="empty py-40px text-center text-14px text-#999">
-      暂无历史记录，在薪资计算页点击「查看明细」会自动保存一条。
-    </view>
+    <wd-empty
+      v-if="list.length === 0"
+      tip="暂无历史记录，在薪资计算页点击「查看明细」会自动保存一条。"
+    />
     <view v-for="item in list" :key="item.id" class="history-swipe-wrap mb-10px">
       <wd-swipe-action>
         <view class="card rounded-12px bg-white p-14px shadow-sm" @click="openDetail(item)">
@@ -63,7 +64,7 @@ function confirmDelete(item: SalaryHistoryItem) {
               </view>
             </view>
             <view class="shrink-0 text-right">
-              <view class="text-16px text-#3A96F5 font-semibold tabular-nums">
+              <view class="text-16px text-primary font-semibold tabular-nums">
                 ¥{{ fmt(item.snapshot.result.annualTakeHome) }}
               </view>
               <view class="mt-4px text-11px text-#999">

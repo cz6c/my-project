@@ -24,6 +24,11 @@ export interface SalaryHistoryItem {
   snapshot: SalaryCalcSnapshot
 }
 
+/** 深拷贝计算结果，便于序列化写入本地 */
+export function cloneSalaryCalcResult(r: SalaryCalcResult): SalaryCalcResult {
+  return JSON.parse(JSON.stringify(r)) as SalaryCalcResult
+}
+
 /** 薪资测算历史：由 pinia-plugin-persistedstate 写入本地 `salary-calc-history` */
 export const useSalaryHistoryStore = defineStore('salaryHistory', {
   state: () => ({

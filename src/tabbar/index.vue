@@ -73,11 +73,6 @@ onMounted(() => {
   })
 })
 // #endif
-const activeColor = '#3A96F5'
-const inactiveColor = '#666'
-function getColorByIndex(index: number) {
-  return tabbarStore.curIdx === index ? activeColor : inactiveColor
-}
 </script>
 
 <template>
@@ -87,7 +82,7 @@ function getColorByIndex(index: number) {
         <view
           v-for="(item, index) in tabbarList" :key="index"
           class="flex flex-1 flex-col items-center justify-center"
-          :style="{ color: getColorByIndex(index) }"
+          :class="tabbarStore.curIdx === index ? 'text-primary' : 'text-#666'"
           @click="handleClick(index)"
         >
           <view v-if="item.isBulge" class="relative">

@@ -11,11 +11,20 @@
 
 :root,
 page {
-  // 修改按主题色
-  // --wot-color-theme: #37c2bc;
-
-  // 修改按钮背景色
-  // --wot-button-primary-bg-color: green;
+  /*
+   * @wot-ui/ui v2 主题：组件使用 --wot-primary-*（见 node_modules/@wot-ui/ui/styles/variable.scss），
+   * 不使用旧版 wot-design 的 --wot-color-theme。
+   */
+  --wot-primary-1: #e8f0fe;
+  --wot-primary-2: #d2e3fc;
+  --wot-primary-3: #aecbfa;
+  --wot-primary-4: #8ab4f8;
+  --wot-primary-5: #669df6;
+  --wot-primary-6: #4285f4;
+  --wot-primary-7: #1967d2;
+  --wot-primary-8: #185abc;
+  --wot-primary-9: #174ea6;
+  --wot-primary-10: #174092;
 }
 
 /*
