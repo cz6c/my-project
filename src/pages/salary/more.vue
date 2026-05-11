@@ -4,7 +4,6 @@ defineOptions({ name: 'SalaryMore' })
 definePage({
   style: {
     navigationBarTitleText: '更多工具',
-    backgroundColor: '#f5f5f5',
   },
 })
 </script>

@@ -10,9 +10,6 @@ const canvasHost = getCurrentInstance()?.proxy as ComponentPublicInstance | unde
 definePage({
   style: {
     navigationBarTitleText: '证件照片加水印',
-    navigationBarBackgroundColor: '#4285f4',
-    navigationBarTextStyle: 'white',
-    backgroundColor: '#f5f5f5',
   },
 })
 

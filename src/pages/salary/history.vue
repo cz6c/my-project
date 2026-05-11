@@ -11,7 +11,6 @@ const { closeOutside } = useQueue()
 definePage({
   style: {
     navigationBarTitleText: '历史记录',
-    backgroundColor: '#f5f5f5',
   },
 })
 

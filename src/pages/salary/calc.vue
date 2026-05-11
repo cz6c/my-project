@@ -18,8 +18,18 @@ defineOptions({ name: 'SalaryCalc' })
 definePage({
   type: 'home',
   style: {
-    navigationStyle: 'custom',
-    navigationBarTitleText: '得薪应手-税后工资计算',
+    'navigationStyle': 'custom',
+    'navigationBarTitleText': '得薪应手-税后工资计算',
+    /**
+     * 支付宝：须显式覆盖标题，否则会沿用 globalStyle 的 navigationBarTitleText（如「unibest」）；
+     * 空格用于占位隐藏原生文案，配合 transparentTitle 与自定义头部。
+     * @see https://opendocs.alipay.com/mini/framework/app-json
+     */
+    'mp-alipay': {
+      defaultTitle: ' ',
+      transparentTitle: 'always',
+      titlePenetrate: 'YES',
+    },
   },
 })
 

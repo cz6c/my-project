@@ -10,9 +10,6 @@ defineOptions({ name: 'SalaryDetail' })
 definePage({
   style: {
     navigationBarTitleText: '薪资明细',
-    navigationBarBackgroundColor: '#4285f4',
-    navigationBarTextStyle: 'white',
-    backgroundColor: '#f5f5f5',
   },
 })
 

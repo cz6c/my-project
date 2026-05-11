@@ -1,12 +1,12 @@
 <script lang="ts" setup>
 import { computed, ref } from 'vue'
-import { useSalaryCalcStore } from '@/store/salaryCalc'
 import {
-  SALARY_INDEX_LETTERS,
   filterSalaryCities,
   groupSalaryCitiesByIndex,
   hotSalaryCityOptions,
+  SALARY_INDEX_LETTERS,
 } from '@/constants/salaryCityPicker'
+import { useSalaryCalcStore } from '@/store/salaryCalc'
 import { getCityProfile } from '@/utils/salaryCalculator'
 
 defineOptions({ name: 'SalarySelectCity' })
@@ -14,8 +14,6 @@ defineOptions({ name: 'SalarySelectCity' })
 definePage({
   style: {
     navigationBarTitleText: '选择城市',
-    navigationBarBackgroundColor: '#ffffff',
-    backgroundColor: '#ffffff',
   },
 })
 
