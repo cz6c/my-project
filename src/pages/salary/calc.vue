@@ -185,6 +185,7 @@ function goDetail() {
 </script>
 
 <template>
+  <page-meta :page-style="`overflow:${showSsTypePicker || showYearEndModePicker || showHfTypePicker || showSpecialDeductionTip ? 'hidden' : 'visible'};`" />
   <view class="page">
     <view class="header header--gradient pt-safe">
       <view class="header-bar h-44px flex items-center justify-center text-17px text-#fff font-medium">
