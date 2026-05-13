@@ -8,11 +8,13 @@ function defaultInput(): SalaryCalcInput {
     preTaxMonthly: 10000,
     yearEndTaxMode: 'separate',
     yearEndBonus: 0,
-    ssPaymentType: 'min_base',
-    ssBase: 2360,
+    ssPaymentType: 'custom',
+    ssBase: 0,
+    ssPersonalAmount: 0,
     hfPaymentType: 'none',
     hfRate: 0.12,
-    hfBase: 2360,
+    hfBase: 10000,
+    hfPersonalAmount: 0,
     specialDeductionMonthly: 0,
   }
 }

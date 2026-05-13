@@ -1,17 +1,17 @@
 /**
  *
- * 流程概览：解析社保/公积金缴费基数 → 算五险与公积金月缴额 → 按累计预扣法算 12 个月个税与税后
- * → 年终奖单独计税或并入综合所得 → 汇总年度到手与税额 → 组装五险一金分项表。
+ * 流程概览：解析社保/公积金个人缴费基数或个缴额 → 算五险与公积金个人月缴额 → 按累计预扣法算 12 个月个税与税后
+ * → 年终奖单独计税或并入综合所得 → 汇总年度到手与税额。
  */
 
 import { getSalaryCityName } from '@/constants/salaryCityPicker'
 
 /** 年终奖计税方式：单独计税 | 并入综合所得 */
-export type YearEndTaxMode = 'separate' | 'merge'
-/** 社保缴费基数规则：最低基数 | 按实际工资 | 自定义基数 */
-export type SsPaymentType = 'min_base' | 'actual_salary' | 'custom'
-/** 公积金缴纳基数方式：不缴纳 | 最低基数 | 按照工资 | 自定义 */
-export type HfPaymentType = 'none' | 'min_base' | 'by_salary' | 'custom'
+export type YearEndTaxMode = 'none' | 'separate' | 'merge'
+/** 社保计算方式：按基数比例 | 按个缴金额（直接填五险个人合计，不按比例） */
+export type SsPaymentType = 'base' | 'custom'
+/** 公积金计算方式：不缴纳 | 按基数比例 | 按个缴金额（直接填个人月缴，不按比例） */
+export type HfPaymentType = 'none' | 'base' | 'custom'
 
 export interface CityProfile {
   /** 城市 id，与选择器、输入里的 cityId 对应 */
@@ -24,8 +24,6 @@ export interface CityProfile {
   ssBaseCap: number
   /** 个人比例：养老、医疗、失业 */
   ssPersonalRates: { pension: number, medical: number, unemployment: number }
-  /** 单位比例：养老、医疗、失业、工伤、生育 */
-  ssCompanyRates: { pension: number, medical: number, unemployment: number, injury: number, maternity: number }
 }
 
 /** 内置城市参保参数表（当前仅深圳一条完整数据） */
@@ -38,7 +36,6 @@ export const CITY_LIST: CityProfile[] = [
     // ssBaseMin2: 2520,
     ssBaseCap: 27549,
     ssPersonalRates: { pension: 0.08, medical: 0.02, unemployment: 0.002 },
-    ssCompanyRates: { pension: 0.16, medical: 0.06, unemployment: 0.008, injury: 0.002, maternity: 0.005 },
   },
 ]
 
@@ -56,7 +53,6 @@ export function getCityProfile(cityId: string): CityProfile {
     ssBaseMin: t.ssBaseMin,
     ssBaseCap: t.ssBaseCap,
     ssPersonalRates: { ...t.ssPersonalRates },
-    ssCompanyRates: { ...t.ssCompanyRates },
   }
 }
 
@@ -70,34 +66,22 @@ export interface SalaryCalcInput {
   yearEndTaxMode: YearEndTaxMode
   /** 年终奖税前金额（元），为 0 表示无年终奖 */
   yearEndBonus: number
-  /** 社保缴费基数规则：最低基数 / 按实际工资 / 自定义基数 */
+  /** 社保计算方式：`base` 按基数比例，`custom` 按个缴金额 */
   ssPaymentType: SsPaymentType
-  /** 自定义社保缴费基数（元），仅 `ssPaymentType === 'custom'` 时生效 */
+  /** 社保缴费基数（元），仅 `ssPaymentType === 'base'` 时参与比例计算 */
   ssBase: number
-  /** 公积金缴费基数与是否缴纳，见 `HfPaymentType` */
+  /** 五险个人部分月缴合计（元），仅 `ssPaymentType === 'custom'` 时生效 */
+  ssPersonalAmount: number
+  /** 公积金计算方式，见 `HfPaymentType` */
   hfPaymentType: HfPaymentType
-  /** 公积金个人与单位缴存比例（小数，如 0.12 表示 12%） */
+  /** 公积金缴存比例（小数，如 0.12）；仅 `hfPaymentType === 'base'` 时使用 */
   hfRate: number
-  /** 自定义公积金缴费基数（元），仅 `hfPaymentType === 'custom'` 时生效 */
+  /** 公积金缴费基数（元），仅 `hfPaymentType === 'base'` 时使用 */
   hfBase: number
+  /** 公积金个人月缴额（元），仅 `hfPaymentType === 'custom'` 时生效 */
+  hfPersonalAmount: number
   /** 每月专项附加扣除合计（元），将多项简化为月度固定额参与累计预扣 */
   specialDeductionMonthly: number
-}
-
-/** 五险一金单行展示：险种名、个人/单位金额与比例文案 */
-export interface InsuranceRow {
-  /** 行唯一键，如 `pension`、`medical`、`hf` */
-  key: string
-  /** 界面展示名称，如「养老保险」「公积金」 */
-  label: string
-  /** 个人每月缴纳额（元） */
-  personal: number
-  /** 个人侧比例展示用文案，如「8%」「12%」 */
-  personalRateText: string
-  /** 单位每月缴纳额（元） */
-  company: number
-  /** 单位侧比例展示用文案 */
-  companyRateText: string
 }
 
 /** 单月薪资明细（与累计预扣法下该月一致） */
@@ -121,7 +105,10 @@ export interface MonthlySalaryRow {
 export interface SalaryCalcResult {
   /** 实际采用的参保城市参数（比例、基数上下限等） */
   city: CityProfile
-  /** 核算后的社保缴费基数（元），已夹在政策下限与上限之间 */
+  /**
+   * 核算后的社保缴费基数（元），仅 `ssPaymentType === 'base'` 时有值（夹在上下限）；
+   * `custom`（按个缴金额）时为 0。
+   */
   resolvedSsBase: number
   /** 核算后的公积金缴费基数（元），不缴公积金时为 0 */
   resolvedHfBase: number
@@ -133,16 +120,12 @@ export interface SalaryCalcResult {
   annualTaxTotal: number
   /** 12 个月的税前、个税、税后明细行；各月个税之和即工资部分预扣总额 */
   monthlyRows: MonthlySalaryRow[]
+
   /** 五险个人部分每月合计（元），不含公积金 */
   ssPersonalMonthly: number
   /** 公积金个人每月缴存额（元），不缴时为 0 */
   hfPersonalMonthly: number
-  /** 五险单位部分每月合计（元） */
-  ssCompanyMonthly: number
-  /** 公积金单位每月缴存额（元），不缴时为 0 */
-  hfCompanyMonthly: number
-  /** 各险种与公积金分行数据，供表格展示 */
-  insuranceRows: InsuranceRow[]
+
   /** 年终奖应缴个人所得税（元），无年终奖时为 0 */
   yearEndBonusTax: number
   /** 年终奖税后到手（元）：税前年终奖 − 年终奖个税 */
@@ -210,42 +193,29 @@ function round2(n: number): number {
 }
 
 /**
- * 根据用户选择的规则得到实际「社保缴费基数」，并夹在 [政策下限, 上限]。
+ * 社保个人缴费基数：`base` 时为用户基数夹在政策上下限；`custom` 时不按基数计，返回 0。
  */
 function resolveSsBase(input: SalaryCalcInput, city: CityProfile): number {
   const floor = city.ssBaseMin
-  if (input.ssPaymentType === 'min_base')
-    /** 按下限与政策下限中较高者，且不超过上限 */
-    return Math.min(Math.max(floor, city.ssBaseMin), city.ssBaseCap)
-  if (input.ssPaymentType === 'actual_salary')
-    /** 以当月税前工资为基数，仍受上下限约束 */
-    return Math.min(Math.max(input.preTaxMonthly, floor), city.ssBaseCap)
-  /** custom：用户填写的 ssBase，无效时回退到 floor */
-  return Math.min(Math.max(input.ssBase || floor, floor), city.ssBaseCap)
+  const cap = city.ssBaseCap
+  if (input.ssPaymentType === 'custom')
+    return 0
+  return Math.min(Math.max(input.ssBase || floor, floor), cap)
 }
 
-/**
- * 根据公积金缴纳方式得到「公积金缴费基数」；不缴时为 0，其余同样夹在 [下限, 上限]。
- */
+/** 公积金缴费基数：`base` 时夹在上下限；不缴或个缴时为 0 */
 function resolveHfBase(input: SalaryCalcInput, city: CityProfile): number {
-  if (input.hfPaymentType === 'none')
+  if (input.hfPaymentType === 'none' || input.hfPaymentType === 'custom')
     return 0
   const floor = city.ssBaseMin
   const cap = city.ssBaseCap
-  if (input.hfPaymentType === 'min_base')
-    /** 按下限政策基数 */
-    return Math.min(Math.max(city.ssBaseMin, floor), cap)
-  if (input.hfPaymentType === 'by_salary')
-    /** 按税前月薪为基数，夹在上下限 */
-    return Math.min(Math.max(input.preTaxMonthly, floor), cap)
-  /** custom：用户填写的 hfBase */
   return Math.min(Math.max(input.hfBase || floor, floor), cap)
 }
 
 /**
  * 根据输入测算税前月薪、五险一金与专项附加扣除，按累计预扣法计算全年工资个税及税后现金流，并处理年终奖。
  * @param input 城市、工资、社保公积金与扣除项等
- * @returns 含月度明细、年度汇总、五险一金分项等完整结果
+ * @returns 含月度明细、年度汇总等完整结果
  */
 export function calcSalary(input: SalaryCalcInput): SalaryCalcResult {
   /** ---------- 1. 城市与缴费基数 ---------- */
@@ -255,24 +225,19 @@ export function calcSalary(input: SalaryCalcInput): SalaryCalcResult {
   const ssBase = resolvedSsBase
   const hfBase = resolvedHfBase
   const r = city.ssPersonalRates
-  const cr = city.ssCompanyRates
 
-  /** ---------- 2. 五险与公积金月缴额（个人/单位） ---------- */
-  /** 五险个人：养老 + 医疗 + 失业（工伤、生育个人一般为 0） */
-  const ssPersonalMonthly = round2(
-    ssBase * (r.pension + r.medical + r.unemployment),
-  )
+  /** ---------- 2. 五险与公积金个人月缴额 ---------- */
+  /** 五险个人：养老 + 医疗 + 失业；个缴模式为直接取值 */
+  const ssPersonalMonthly = input.ssPaymentType === 'custom'
+    ? round2(Math.max(0, input.ssPersonalAmount || 0))
+    : round2(
+        ssBase * (r.pension + r.medical + r.unemployment),
+      )
   const hfPersonalMonthly = input.hfPaymentType === 'none'
     ? 0
-    : round2(hfBase * input.hfRate)
-
-  /** 五险单位：五险合计比例 × 基数 */
-  const ssCompanyMonthly = round2(
-    ssBase * (cr.pension + cr.medical + cr.unemployment + cr.injury + cr.maternity),
-  )
-  const hfCompanyMonthly = input.hfPaymentType === 'none'
-    ? 0
-    : round2(hfBase * input.hfRate)
+    : input.hfPaymentType === 'custom'
+      ? round2(Math.max(0, input.hfPersonalAmount || 0))
+      : round2(hfBase * input.hfRate)
 
   /** ---------- 3. 五险一金个人月缴额（与专项附加扣除一并参与累计预扣中的「扣除」侧） ---------- */
   const fiveInsFundPersonalMonthly = round2(ssPersonalMonthly + hfPersonalMonthly)
@@ -338,9 +303,11 @@ export function calcSalary(input: SalaryCalcInput): SalaryCalcResult {
   if (input.yearEndBonus > 0) {
     if (input.yearEndTaxMode === 'separate')
       yearEndBonusTax = round2(yearEndBonusSeparateTax(input.yearEndBonus))
-    else
+    else if (input.yearEndTaxMode === 'merge')
       /** 并入：对（工资部分 + 奖金）累计计税 − 仅工资部分累计税额 */
       yearEndBonusTax = round2(Math.max(0, cumulativeSalaryTax(annualSalaryTaxable + input.yearEndBonus) - cumulativeSalaryTax(annualSalaryTaxable)))
+    else
+      yearEndBonusTax = 0
   }
   const yearEndBonusNet = round2(Math.max(0, input.yearEndBonus - yearEndBonusTax))
 
@@ -350,37 +317,7 @@ export function calcSalary(input: SalaryCalcInput): SalaryCalcResult {
   const salaryTaxTotal = monthlyRows.reduce((s, row) => s + row.tax, 0)
   const annualTaxTotal = round2(salaryTaxTotal + yearEndBonusTax)
 
-  /** ---------- 7. 五险一金分项（展示用，与上面月缴额一致） ---------- */
-  const pensionP = round2(ssBase * r.pension)
-  const medicalP = round2(ssBase * r.medical)
-  const unempP = round2(ssBase * r.unemployment)
-  const pensionC = round2(ssBase * cr.pension)
-  const medicalC = round2(ssBase * cr.medical)
-  const unempC = round2(ssBase * cr.unemployment)
-  const injuryC = round2(ssBase * cr.injury)
-  const matC = round2(ssBase * cr.maternity)
-  const hfP = hfPersonalMonthly
-  const hfC = hfCompanyMonthly
-  /** 小数比例 →「8%」展示文案 */
-  const rate = (x: number) => `${(x * 100)}%`
-
-  const insuranceRows: InsuranceRow[] = [
-    { key: 'pension', label: '养老保险', personal: pensionP, personalRateText: rate(r.pension), company: pensionC, companyRateText: rate(cr.pension) },
-    { key: 'medical', label: '医疗保险', personal: medicalP, personalRateText: rate(r.medical), company: medicalC, companyRateText: rate(cr.medical) },
-    { key: 'unemp', label: '失业保险', personal: unempP, personalRateText: rate(r.unemployment), company: unempC, companyRateText: rate(cr.unemployment) },
-    { key: 'injury', label: '工伤保险', personal: 0, personalRateText: '0%', company: injuryC, companyRateText: rate(cr.injury) },
-    { key: 'mat', label: '生育保险', personal: 0, personalRateText: '0%', company: matC, companyRateText: rate(cr.maternity) },
-    {
-      key: 'hf',
-      label: '公积金',
-      personal: hfP,
-      personalRateText: input.hfPaymentType === 'none' ? '0%' : `${(Math.min(input.hfRate, 1) * 100).toFixed(1).replace(/\.0$/, '')}%`,
-      company: hfC,
-      companyRateText: input.hfPaymentType === 'none' ? '0%' : `${(Math.min(input.hfRate, 1) * 100).toFixed(1).replace(/\.0$/, '')}%`,
-    },
-  ]
-
-  /** ---------- 8. 返回完整测算结果 ---------- */
+  /** ---------- 7. 返回完整测算结果 ---------- */
   return {
     city,
     resolvedSsBase: ssBase,
@@ -391,9 +328,6 @@ export function calcSalary(input: SalaryCalcInput): SalaryCalcResult {
     monthlyRows,
     ssPersonalMonthly,
     hfPersonalMonthly,
-    ssCompanyMonthly,
-    hfCompanyMonthly,
-    insuranceRows,
     yearEndBonusTax,
     yearEndBonusNet,
   }

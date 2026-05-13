@@ -30,12 +30,6 @@ export const nativeTabbarList: NativeTabBarItem[] = [
     pagePath: 'pages/index/index',
     text: '首页',
   },
-  {
-    iconPath: 'static/tabbar/personal.png',
-    selectedIconPath: 'static/tabbar/personalHL.png',
-    pagePath: 'pages/me/me',
-    text: '个人',
-  },
 ]
 
 // TODO: 3/3. 使用 CUSTOM_TABBAR 时，更新下面的 tabbar 配置
@@ -52,12 +46,6 @@ export const customTabbarList: CustomTabBarItem[] = [
     pagePath: 'pages/salary/history',
     iconType: 'unocss',
     icon: 'i-carbon-time',
-  },
-  {
-    text: '更多工具',
-    pagePath: 'pages/salary/more',
-    iconType: 'unocss',
-    icon: 'i-carbon-tools',
   },
 
   // 其他类型演示

@@ -45,43 +45,46 @@ function confirmDelete(item: SalaryHistoryItem) {
 </script>
 
 <template>
-  <view class="page px-12px pt-12px pb-safe" @click="closeOutside">
-    <wd-empty
-      v-if="list.length === 0"
-      tip="暂无历史记录，在薪资计算页点击「查看明细」会自动保存一条。"
-    />
-    <view v-for="item in list" :key="item.id" class="history-swipe-wrap mb-10px">
-      <wd-swipe-action>
-        <view class="card rounded-12px bg-white p-14px shadow-sm" @click="openDetail(item)">
-          <view class="flex items-start justify-between gap-8px">
-            <view class="min-w-0 flex-1">
-              <view class="text-15px text-#333 font-medium">
-                {{ item.title }}
+  <view class="page pb-safe" @click="closeOutside">
+    <wd-notice-bar text="历史记录存在本地，左滑可进行删除，删除后不可恢复" prefix="notification" closable />
+    <view class="p-12px">
+      <wd-empty
+        v-if="list.length === 0"
+        tip="暂无历史记录，在薪资计算页点击「查看明细」会自动保存一条。"
+      />
+      <view v-for="item in list" :key="item.id" class="history-swipe-wrap mb-10px">
+        <wd-swipe-action>
+          <view class="card rounded-12px bg-white p-14px shadow-sm" @click="openDetail(item)">
+            <view class="flex items-start justify-between gap-8px">
+              <view class="min-w-0 flex-1">
+                <view class="text-15px text-#333 font-medium">
+                  {{ item.title }}
+                </view>
+                <view class="mt-6px text-12px text-#999">
+                  {{ formatTime(item.savedAt) }}
+                </view>
               </view>
-              <view class="mt-6px text-12px text-#999">
-                {{ formatTime(item.savedAt) }}
+              <view class="shrink-0 text-right">
+                <view class="text-16px text-primary font-semibold tabular-nums">
+                  ¥{{ fmt(item.snapshot.result.annualTakeHome) }}
+                </view>
+                <view class="mt-4px text-11px text-#999">
+                  到手年薪
+                </view>
               </view>
-            </view>
-            <view class="shrink-0 text-right">
-              <view class="text-16px text-primary font-semibold tabular-nums">
-                ¥{{ fmt(item.snapshot.result.annualTakeHome) }}
-              </view>
-              <view class="mt-4px text-11px text-#999">
-                到手年薪
-              </view>
-            </view>
-          </view>
-        </view>
-        <template #right>
-          <view class="history-swipe-right">
-            <view class="history-swipe-del" @click.stop="confirmDelete(item)">
-              <text class="history-swipe-del-text">
-                删除
-              </text>
             </view>
           </view>
-        </template>
-      </wd-swipe-action>
+          <template #right>
+            <view class="history-swipe-right">
+              <view class="history-swipe-del" @click.stop="confirmDelete(item)">
+                <text class="history-swipe-del-text">
+                  删除
+                </text>
+              </view>
+            </view>
+          </template>
+        </wd-swipe-action>
+      </view>
     </view>
   </view>
 </template>

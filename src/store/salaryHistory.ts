@@ -1,7 +1,7 @@
 import type { SalaryCalcInput, SalaryCalcResult } from '@/utils/salaryCalculator'
 import { defineStore } from 'pinia'
 
-const MAX = 50
+const MAX = 20
 
 /**
  * 一次「保存并查看明细」写入的成对数据：

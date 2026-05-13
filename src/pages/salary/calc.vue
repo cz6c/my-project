@@ -19,7 +19,7 @@ definePage({
   type: 'home',
   style: {
     'navigationStyle': 'custom',
-    'navigationBarTitleText': '得薪应手-税后工资计算',
+    'navigationBarTitleText': '税后工资计算',
     /**
      * 支付宝：须显式覆盖标题，否则会沿用 globalStyle 的 navigationBarTitleText（如「unibest」）；
      * 空格用于占位隐藏原生文案，配合 transparentTitle 与自定义头部。
@@ -60,7 +60,8 @@ const hfBaseLabel = computed(() =>
   salaryOptionLabel(HF_PAYMENT_OPTIONS, salaryForm.value.hfPaymentType),
 )
 
-const showHfRatioAndBase = computed(() => salaryForm.value.hfPaymentType !== 'none')
+/** 仅「按基数比例」公积金展示比例输入 */
+const showHfRatioRow = computed(() => salaryForm.value.hfPaymentType === 'base')
 
 const bonusMultipliers = [1, 2, 3, 4, 6, 8, 10] as const
 const selectedBonusMul = ref<number | null>(1)
@@ -101,12 +102,20 @@ function onSsBaseInput(val: string | number) {
   store.patchInput({ ssBase: parseNum(val, true) })
 }
 
+function onSsPersonalAmountInput(val: string | number) {
+  store.patchInput({ ssPersonalAmount: parseNum(val) })
+}
+
 function onSpecialInput(val: string | number) {
   store.patchInput({ specialDeductionMonthly: parseNum(val) })
 }
 
 function onHfBaseInput(val: string | number) {
   store.patchInput({ hfBase: parseNum(val, true) })
+}
+
+function onHfPersonalAmountInput(val: string | number) {
+  store.patchInput({ hfPersonalAmount: parseNum(val) })
 }
 
 /** 用户输入百分比数字，如 12 表示 12%，存入 hfRate 小数 */
@@ -121,7 +130,7 @@ function onHfRatePercentInput(val: string | number) {
 }
 
 const hfRatePercentStr = computed(() => {
-  if (salaryForm.value.hfPaymentType === 'none')
+  if (salaryForm.value.hfPaymentType !== 'base')
     return ''
   const p = salaryForm.value.hfRate * 100
   if (p <= 0)
@@ -134,12 +143,11 @@ function openSelectCity() {
 }
 
 function pickSsType(key: SsPaymentType) {
-  store.patchInput({ ssPaymentType: key })
   const city = getCityProfile(salaryForm.value.cityId)
-  if (key === 'min_base')
-    store.patchInput({ ssBase: city.ssBaseMin })
-  else if (key === 'actual_salary')
-    store.patchInput({ ssBase: Math.min(Math.max(salaryForm.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap) })
+  if (key === 'base')
+    store.patchInput({ ssPaymentType: key, ssBase: city.ssBaseMin })
+  else
+    store.patchInput({ ssPaymentType: key, ssBase: 0 })
   showSsTypePicker.value = false
 }
 
@@ -150,18 +158,12 @@ function pickYearEndMode(m: YearEndTaxMode) {
 
 function pickHfType(key: HfPaymentType) {
   const city = getCityProfile(salaryForm.value.cityId)
-  if (key === 'min_base') {
+  if (key === 'base')
     store.patchInput({ hfPaymentType: key, hfBase: city.ssBaseMin })
-  }
-  else if (key === 'by_salary') {
-    store.patchInput({
-      hfPaymentType: key,
-      hfBase: Math.min(Math.max(salaryForm.value.preTaxMonthly, city.ssBaseMin), city.ssBaseCap),
-    })
-  }
-  else {
+  else if (key === 'custom')
+    store.patchInput({ hfPaymentType: key, hfBase: 0 })
+  else
     store.patchInput({ hfPaymentType: key })
-  }
   showHfTypePicker.value = false
 }
 
@@ -184,7 +186,7 @@ function goDetail() {
   <view class="page">
     <view class="header header--gradient pt-safe">
       <view class="header-bar h-44px flex items-center justify-center text-17px text-#fff font-medium">
-        得薪应手-税后工资计算
+        税后工资计算
       </view>
     </view>
 
@@ -230,25 +232,54 @@ function goDetail() {
       </scroll-view>
 
       <wd-cell-group custom-class="salary-cell-group mb-12px" border>
-        <wd-cell title="社保缴纳类型" :value="ssTypeLabel" is-link @click="showSsTypePicker = true" />
-        <wd-cell title="社保缴纳基数">
+        <wd-cell title="社保计算方式" :value="ssTypeLabel" is-link @click="showSsTypePicker = true">
+          <template #title>
+            <view class="flex items-center gap-4px">
+              <text>社保计算方式</text>
+              <wd-icon name="question-circle" size="16px" class="text-primary" />
+            </view>
+          </template>
+        </wd-cell>
+        <wd-cell v-if="salaryForm.ssPaymentType === 'base'" title="社保缴费基数">
           <wd-input
-            v-if="salaryForm.ssPaymentType === 'custom'"
             type="number"
             align-right
             :model-value="String(salaryForm.ssBase)"
             custom-class="salary-cell-input"
             @update:model-value="onSsBaseInput"
           />
-          <text v-else class="salary-cell-readonly tabular-nums">
-            {{ Math.round(result.resolvedSsBase) }}
-          </text>
         </wd-cell>
-      </wd-cell-group>
-
-      <wd-cell-group custom-class="salary-cell-group mb-12px" border>
-        <wd-cell title="公积金缴纳基数" :value="hfBaseLabel" is-link @click="showHfTypePicker = true" />
-        <wd-cell v-if="showHfRatioAndBase" title="公积金缴纳比例">
+        <wd-cell v-else title="社保个缴金额（月）">
+          <wd-input
+            type="digit"
+            align-right
+            :model-value="salaryForm.ssPersonalAmount ? String(salaryForm.ssPersonalAmount) : ''"
+            placeholder="五险个人部分合计"
+            custom-class="salary-cell-input"
+            @update:model-value="onSsPersonalAmountInput"
+          />
+        </wd-cell>
+        <wd-cell title="公积金计算方式" :value="hfBaseLabel" is-link @click="showHfTypePicker = true" />
+        <wd-cell v-if="salaryForm.hfPaymentType === 'base'" title="公积金缴费基数">
+          <wd-input
+            type="number"
+            align-right
+            :model-value="String(salaryForm.hfBase)"
+            custom-class="salary-cell-input"
+            @update:model-value="onHfBaseInput"
+          />
+        </wd-cell>
+        <wd-cell v-else-if="salaryForm.hfPaymentType === 'custom'" title="公积金个缴金额（月）">
+          <wd-input
+            type="digit"
+            align-right
+            :model-value="salaryForm.hfPersonalAmount ? String(salaryForm.hfPersonalAmount) : ''"
+            placeholder="个人月缴存额"
+            custom-class="salary-cell-input"
+            @update:model-value="onHfPersonalAmountInput"
+          />
+        </wd-cell>
+        <wd-cell v-if="showHfRatioRow" title="公积金缴纳比例">
           <view class="flex flex-1 items-center justify-end gap-4px">
             <wd-input
               type="digit"
@@ -262,20 +293,6 @@ function goDetail() {
               %
             </text>
           </view>
-        </wd-cell>
-        <wd-cell v-if="salaryForm.hfPaymentType === 'custom'" title="公积金基数">
-          <wd-input
-            type="number"
-            align-right
-            :model-value="String(salaryForm.hfBase)"
-            custom-class="salary-cell-input"
-            @update:model-value="onHfBaseInput"
-          />
-        </wd-cell>
-        <wd-cell v-else-if="showHfRatioAndBase" title="公积金缴费基数">
-          <text class="salary-cell-readonly tabular-nums">
-            {{ Math.round(result.resolvedHfBase) }}
-          </text>
         </wd-cell>
       </wd-cell-group>
 
@@ -309,7 +326,7 @@ function goDetail() {
       closable
     >
       <view class="picker-sheet-title">
-        社保缴纳类型
+        社保计算方式
       </view>
       <wd-cell-group border>
         <wd-cell
@@ -353,7 +370,7 @@ function goDetail() {
       closable
     >
       <view class="picker-sheet-title">
-        公积金缴纳基数
+        公积金计算方式
       </view>
       <wd-cell-group border>
         <wd-cell

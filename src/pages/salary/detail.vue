@@ -47,14 +47,7 @@ const yearEndTaxLabel = computed(() =>
   salaryOptionLabel(YEAR_END_TAX_OPTIONS, detailInput.value.yearEndTaxMode),
 )
 
-const insPersonalTotal = computed(() =>
-  r.value.insuranceRows.reduce((s, row) => s + row.personal, 0),
-)
-/** 五险个人部分年度合计（与下方「每月五险一金」个人列加总一致） */
-const annualInsPersonalP = computed(() => insPersonalTotal.value * 12)
-const insCompanyTotal = computed(() =>
-  r.value.insuranceRows.reduce((s, row) => s + row.company, 0),
-)
+const annualInsPersonalP = computed(() => r.value.fiveInsFundPersonalMonthly * 12)
 
 function fmt(n: number) {
   return (Math.round(n * 100) / 100).toFixed(2)
@@ -190,77 +183,6 @@ const INCOME_TAX_BRACKETS = [
 
       <view class="section-title mt-20px">
         <view class="bar bg-primary" />
-        <text>每月五险一金</text>
-      </view>
-      <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
-        <view class="ins-table">
-          <view class="ins-head">
-            <view class="ins-cell ins-cell--name">
-              <text class="ins-head-text">
-                五险一金
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-head-text">
-                个人缴纳
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-head-text">
-                公司缴纳
-              </text>
-            </view>
-          </view>
-          <view
-            v-for="(row, idx) in r.insuranceRows"
-            :key="row.key"
-            class="ins-row"
-            :class="idx % 2 === 1 ? 'ins-row--alt' : ''"
-          >
-            <view class="ins-cell ins-cell--name">
-              <text class="ins-body-text">
-                {{ row.label }}
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-num tabular-nums">
-                {{ fmt(row.personal) }}
-              </text>
-              <text class="ins-sub tabular-nums">
-                ({{ row.personalRateText }})
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-num tabular-nums">
-                {{ fmt(row.company) }}
-              </text>
-              <text class="ins-sub tabular-nums">
-                ({{ row.companyRateText }})
-              </text>
-            </view>
-          </view>
-          <view class="ins-row ins-row--total">
-            <view class="ins-cell ins-cell--name">
-              <text class="ins-body-text ins-body-text--bold">
-                总计
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-num ins-body-text--bold tabular-nums">
-                {{ fmt(insPersonalTotal) }}
-              </text>
-            </view>
-            <view class="ins-cell ins-cell--half">
-              <text class="ins-num ins-body-text--bold tabular-nums">
-                {{ fmt(insCompanyTotal) }}
-              </text>
-            </view>
-          </view>
-        </view>
-      </view>
-
-      <view class="section-title mt-20px">
-        <view class="bar bg-primary" />
         <text>个人所得税税率表（综合所得适用）</text>
       </view>
       <view class="card mt-8px overflow-hidden rounded-12px bg-white shadow-sm">
@@ -337,7 +259,7 @@ const INCOME_TAX_BRACKETS = [
 }
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px 8px;
 }
 .sum-cell {

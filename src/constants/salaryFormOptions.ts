@@ -5,25 +5,24 @@ export interface SalaryOption<T extends string = string> {
   value: T
 }
 
-/** 社保缴纳类型 */
+/** 社保计算方式 */
 export const SS_PAYMENT_OPTIONS: SalaryOption<SsPaymentType>[] = [
-  { label: '最低基数', value: 'min_base' },
-  { label: '实际工资（在上下限内）', value: 'actual_salary' },
-  { label: '自定义基数', value: 'custom' },
+  { label: '按基数比例计算', value: 'base' },
+  { label: '按个缴金额计算', value: 'custom' },
 ]
 
 /** 年终计税方式 */
 export const YEAR_END_TAX_OPTIONS: SalaryOption<YearEndTaxMode>[] = [
+  { label: '不计税', value: 'none' },
   { label: '单独计税', value: 'separate' },
   { label: '并入综合所得', value: 'merge' },
 ]
 
-/** 公积金缴纳基数 */
+/** 公积金计算方式 */
 export const HF_PAYMENT_OPTIONS: SalaryOption<HfPaymentType>[] = [
   { label: '不缴纳', value: 'none' },
-  { label: '最低基数', value: 'min_base' },
-  { label: '按照工资', value: 'by_salary' },
-  { label: '自定义', value: 'custom' },
+  { label: '按基数比例计算', value: 'base' },
+  { label: '按个缴金额计算', value: 'custom' },
 ]
 
 export function salaryOptionLabel<T extends string>(

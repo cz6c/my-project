@@ -33,10 +33,14 @@ const lettersWithData = computed(() =>
 function selectCity(id: string) {
   store.patchInput({ cityId: id })
   const city = getCityProfile(id)
-  if (store.input.ssPaymentType === 'min_base')
-    store.patchInput({ ssBase: city.ssBaseMin })
-  if (store.input.hfPaymentType === 'min_base')
-    store.patchInput({ hfBase: city.ssBaseMin })
+  if (store.input.ssPaymentType === 'base') {
+    const p = store.input.preTaxMonthly
+    store.patchInput({ ssBase: Math.min(Math.max(p, city.ssBaseMin), city.ssBaseCap) })
+  }
+  if (store.input.hfPaymentType === 'base') {
+    const p = store.input.preTaxMonthly
+    store.patchInput({ hfBase: Math.min(Math.max(p, city.ssBaseMin), city.ssBaseCap) })
+  }
   uni.navigateBack()
 }
 </script>
